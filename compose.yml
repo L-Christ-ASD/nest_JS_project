@@ -1,0 +1,105 @@
+services:
+  nest_app:
+    
+    container_name: nest_app
+    build:
+        context: ./nest_app
+        dockerfile: Dockerfile
+        target: ${ENVIRONMENT}
+
+    ports:
+        - "5173:5173"
+        - "3000:3000"
+    
+    develop:
+        watch:
+            - action: sync
+              path: ./nest_app/src
+              target: /app/src
+            - action: sync+restart
+              path: ./nest_app
+              target: /app
+              ignore:
+                - ./src
+            - action: rebuild
+              path: ./nest_app/package.json
+    networks:
+    - nest_network
+
+  server:
+    container_name: server_nest_app
+    build:
+      context: ./nest_app
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - 8080:80
+
+    volumes:
+    - ./nest_app/src:/app/src   # Synchroniser les sources entre le conteneur et l'hôte
+    - ./nest_app:/app
+    networks:
+    - nest_network
+
+  sonarqube:
+  
+    container_name: sonarqube
+    build:
+          context: ./sonarqube
+          dockerfile: Dockerfile
+          tags:
+            - sonarqube-img
+          target: sonarqube
+    environment:
+      - SONARQUBE_JDBC_URL=jdbc:postgresql://sonar_db:5432/sonar
+      - SONARQUBE_JDBC_USERNAME=sonar
+      - SONARQUBE_JDBC_PASSWORD=sonar
+    ports:
+      - "9000:9000"  # Accéder à SonarQube via http://localhost:9000
+    networks:
+      - sonar_network
+      - nest_network
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+      - ./:/usr/src
+    depends_on:
+      sonar_db:
+        condition: service_healthy
+
+  sonar_db:
+    image: postgres:alpine
+    container_name: sonar_db
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+      - POSTGRES_DB=sonar
+    networks:
+      - sonar_network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "sonar","-h", "localhost"]
+      interval: 10s
+      timeout: 15s
+      retries: 5 
+      start_period: 30s
+
+networks:
+  nest_network:
+  sonar_network:
+    driver: bridge
+
+volumes:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
+  postgres_data:
+
+
+
+
+
+
+
