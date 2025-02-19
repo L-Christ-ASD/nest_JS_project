@@ -1,5 +1,5 @@
 ---
-name: build and scan image with trivy
+name: Build and Scan Image with Trivy
 
 on:
   push:
@@ -8,14 +8,17 @@ on:
 
 jobs:
   scan:
-    name: scan
+    name: Scan Docker Image
     runs-on: ubuntu-24.04
     steps:
-      - name: checkout code
-        uses: action/checkout@v4
-      - name: build the image from docker
-        run: docker build -tag christ/nest-app:${{ github.sha }} --target production ./react_app
-      - name: Run Trivy vulnerability scanner on image
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build the Docker Image
+        run: |
+          docker build -t christ/nest-app:${{ github.sha }} ./nest_app
+
+      - name: Run Trivy Vulnerability Scanner on Image
         uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: 'christ/nest-app:${{ github.sha }}'
@@ -24,7 +27,8 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-      - name: Run Trivy vulnerability scanner on configuration files
+
+      - name: Run Trivy Vulnerability Scanner on Configuration Files
         uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'config'
@@ -32,13 +36,16 @@ jobs:
           format: 'sarif'
           output: 'config-scan-results-${{ github.sha }}.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-      - name: Upload Trivy image scan results
+
+      - name: Upload Trivy Image Scan Results
         uses: actions/upload-artifact@v4
         with:
           name: trivy-image-report
           path: image-scan-results-${{ github.sha }}.txt
-      - name: Upload Trivy image scan results
+
+      - name: Upload Trivy Config Scan Results
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-scan-report
+          name: trivy-config-report
           path: config-scan-results-${{ github.sha }}.sarif
+
