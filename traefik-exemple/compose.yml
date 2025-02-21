@@ -1,0 +1,32 @@
+services:
+  reverse-proxy:
+    image: traefik:latest
+    container_name: traefik
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080" # Tableau de bord de Traefik
+    command:
+      - --api.insecure=true # Active l'interface du tableau de bord sans authentification
+      - --providers.docker=true # Active Dodcker comme provider dynamique
+      - --entrypoints.web.address=:80 # Définit un entrypoint HTTP sur le port 80
+      - --providers.docker.defaultRule=Host(`{{ .ContainerName }}.docker.localhost`)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Permet à Traefik d'accéder aux informations des conteneurs Docker
+
+  whoami:
+    image: traefik/whoami # Service simple qui retourne des informations sur la requête HTTP
+    container_name: whoami
+    # labels:
+    #   - "traefik.http.routers.whoami.rule=Host(`whoami.docker.localhost`)" # Règle de routage basée sur l'hôte
+
+  whoami-again:
+    image: traefik/whoami
+    container_name: whoami-again
+    # labels:
+    #   - "traefik.http.routers.whoami-again.rule=Host(`whoami-again.docker.localhost`)" # Règle de routage basée sur l'hôte
+
+
+networks:
+  default:
+    name: traefik-net

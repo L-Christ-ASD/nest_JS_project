@@ -1,16 +1,34 @@
 services:
+  
+  traefik-proxy:
+    image: traefik:latest
+    container_name: traefik
+    restart: always
+    command:
+      - "--api.insecure=true"  # Interface web Traefik (désactiver en prod)
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080" # Port pour l'interface web Traefik
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - nest_network
+
   nest_app:
-    
+
     container_name: nest_app
     build:
         context: ./nest_app
         dockerfile: Dockerfile
         target: ${ENVIRONMENT}
-
     ports:
         - "5173:5173"
         - "3000:3000"
-    
     develop:
         watch:
             - action: sync
@@ -23,23 +41,83 @@ services:
                 - ./src
             - action: rebuild
               path: ./nest_app/package.json
+    environment:
+      - DATABASE_URL=postgresql://user:password@pgsql:5432/mydb
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nest_app.rule=Host(`api.localhost`)"
+      - "traefik.http.services.nest_app.loadbalancer.server.port=3000"
     networks:
-    - nest_network
+      - nest_network
+    depends_on:
+        pgsql:
+          condition: service_healthy
 
-  server:
-    container_name: server_nest_app
+
+  frontend:
     build:
-      context: ./nest_app
+      context: ./frontend
       dockerfile: Dockerfile
-      target: production
+    container_name: frontend
     ports:
-      - 8080:80
-
-    volumes:
-    - ./nest_app/src:/app/src   # Synchroniser les sources entre le conteneur et l'hôte
-    - ./nest_app:/app
+        - "8085:80"
+    depends_on:
+      - nest_app
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`frontend.localhost`)"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
     networks:
-    - nest_network
+      - nest_network
+
+  pgsql:
+    image: postgres:alpine
+    container_name: pgsql
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mydb
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      #- ./init.sql:/docker-entrypoint-initdb.d/init.sql  # Ajout du script d'initialisation
+    networks:
+      - nest_network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "user","-h", "localhost"]
+      interval: 20s
+      timeout: 20s
+      retries: 5 
+      start_period: 30s
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: password
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.localhost`)"
+      - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
+    networks:
+      - nest_network
+
+#  server:
+#    container_name: server_nest_app
+#    build:
+#      context: ./nest_app
+#      dockerfile: Dockerfile
+#      target: production
+#    ports:
+#      - 8080:80
+
+ #   volumes:
+#    - ./nest_app/src:/app/src   # Synchroniser les sources entre le conteneur et l'hôte
+#    - ./nest_app:/app
+#    networks:
+#    - nest_network
 
   sonarqube:
   
@@ -63,10 +141,14 @@ services:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_extensions:/opt/sonarqube/extensions
       - sonarqube_logs:/opt/sonarqube/logs
-      - ./:/usr/src
     depends_on:
       sonar_db:
         condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarqube.rule=Host(`sonarqube.localhost`)"
+      - "traefik.http.services.sonarqube.loadbalancer.server.port=9000"
+
 
   sonar_db:
     image: postgres:alpine
@@ -96,6 +178,7 @@ volumes:
   sonarqube_extensions:
   sonarqube_logs:
   postgres_data:
+  pg_data:
 
 
 

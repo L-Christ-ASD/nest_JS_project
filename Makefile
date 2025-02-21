@@ -20,12 +20,12 @@ sonar-scan:
     --network=s13-challenge_sonar_network \
     -e SONAR_HOST_URL="http://sonarqube:9000"  \
     -e SONAR_TOKEN="${SONAR_TOKEN}" \
-    -v "${pwd}:/usr/src" \
+    -v "/workspaces/S13-Challenge:/usr/src" \
     sonarsource/sonar-scanner-cli \
 	-Dsonar.projectKey=${PROJECT_KEY}
 
 project:
-	@docker compose up
+	@docker compose up -d
 
 
 	
