@@ -1,6 +1,15 @@
 # Transformer un projet NestJS en multi-staging
 
-Orchestration d'un environnement de développement incluant une application NestJS, un frontend, une base de données PostgreSQL, un reverse proxy Traefik et des outils de monitoring comme PgAdmin et SonarQube.
+Orchestration d'un environnement de développement incluant une application **NestJS**, un frontend **Vite React TS**, une base de données **PostgreSQL**, un reverse proxy **Traefik** et des outils de monitoring comme **PgAdmin** et **SonarQube**.
+Ce projet inclu une chaine de livraison **CI/CD** (github-action) afin d'automatiser le deploiement!  
+
+## Prérequis  
+
+*Logiciels* : Docker et Docker Compose installés sur votre machine.
+
+*Connaissances* : Notions de base sur Docker, la gestion des volumes et des réseaux.
+
+*Matériel* : Terminal, éditeur de texte (IDE) et navigateur web.
 
 ## Points positifs :  
 
@@ -106,5 +115,6 @@ Actuellement, SonarQube stocke ses logs dans /opt/sonarqube/logs, mais il peut �
 ✔ Ne pas exposer PostgreSQL en dehors du réseau Docker  
 ✔ Utiliser .env pour les mots de passe et les configurations sensibles  
 ✔ Limiter la taille des logs SonarQube avec logging  
-✔ Ajouter un host Traefik pour le frontend.
-✔ Utiliser le multi-staging pour tout les services afin de reduire la taille des image en prod.
+✔ Ajouter un host Traefik pour le frontend.  
+✔ Utiliser le multi-staging pour tout les services afin de reduire la taille des image en prod.  
+✔ Rajouter un exit-code (ou une validation manuelle) dans la ci/cd
